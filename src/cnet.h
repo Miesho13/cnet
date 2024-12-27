@@ -27,6 +27,7 @@
 
 #include "cnet_cfg.h"
 
+#include <netdb.h>
 #include <stdint.h>
 
 #ifdef __linux__
@@ -40,29 +41,44 @@
 
 
 typedef enum {
-    CNET_TCP = 0,
-    CNET_TLS,
-    CNET_UDP,
-    CNET_DTLS,
+    TRANSPORT_TCP = 0,
+    TRANSPORT_TLS,
+    TRANSPORT_UDP,
+    TRANSPORT_DTLS,
 
 } transport_layer_t;
 
 typedef struct {
+    char *host_name;
+    char *port;
+} host_descriptor;
+
+typedef struct {
+    host_descriptor host;
+
+    transport_layer_t transport;
+
     int sockfd;
-    struct sockaddr_in sock_addr;
-    
+    struct addrinfo server_addr_info;
 } cnet_conn_t;
 
 
 /*
  * 
  */
-cnet_conn_t* cnet_client_open(const char *uri, uint16_t port,
+cnet_conn_t* cnet_client_open_tcp(const char *uri, uint16_t port,
                               transport_layer_t tran);
+/*
+ * Use this functions for crate context for udp comunication.
+ */
+cnet_conn_t* cnet_client_open_udp(const char *host);
+cnet_conn_t* cnet_client_close_udp(const char *uri, uint16_t port,
+                              transport_layer_t tran);
+
 /*
  * 
  */
-int  cnet_client_send(cnet_conn_t cnh, uint8_t* msg, size_t msg_len);
+int  cnet_client_send(cnet_conn_t *cnh, uint8_t* msg, size_t msg_len);
 
 /*
  * 
