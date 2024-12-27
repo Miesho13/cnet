@@ -1,9 +1,11 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(cnetlib)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_C_COMPILER clang)
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -g -O0")
 
-set(CMAKE_C_STANDARD 17)
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -g")
+project(cnetlib C)
+
 
 file(GLOB_RECURSE CNET_SRC "src/*.c")
 
