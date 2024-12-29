@@ -38,57 +38,45 @@
 #include <netinet/in.h>
 #endif
 
-
-
 typedef enum {
     TRANSPORT_TCP = 0,
     TRANSPORT_TLS,
     TRANSPORT_UDP,
     TRANSPORT_DTLS,
-
 } transport_layer_t;
 
 typedef struct {
     char *host_name;
     char *port;
-} host_descriptor;
+} host_info;
 
 typedef struct {
-    host_descriptor host;
-
+    host_info host;
     transport_layer_t transport;
-
     int sockfd;
     struct addrinfo server_addr_info;
-} cnet_conn_t;
+} cnet_client;
 
+typedef struct {
+    host_info host;
 
-/*
- * 
- */
-cnet_conn_t* cnet_client_open_tcp(const char *uri, uint16_t port,
-                              transport_layer_t tran);
-/*
- * Use this functions for crate context for udp comunication.
- */
-cnet_conn_t* cnet_client_open_udp(const char *host);
-cnet_conn_t* cnet_client_close_udp(const char *uri, uint16_t port,
-                              transport_layer_t tran);
+    int sockfd;
+    struct sockaddr_in server_addr; // ipv4
+} cnet_server;
 
-/*
- * 
- */
-int  cnet_client_send(cnet_conn_t *cnh, uint8_t* msg, size_t msg_len);
+typedef struct {
+    struct sockaddr_in sockaddr;
+    socklen_t addrlen;
+    size_t msg_len;
+    uint8_t msg[512];
 
-/*
- * 
- */
-int  cnet_client_recv(cnet_conn_t cnh, uint8_t* msg, size_t msg_len);
+} message;
 
-/*
- *
- */
-void cnet_client_close(cnet_conn_t cnh);
+cnet_client* cnet_client_open_udp(const char* host);
+int cnet_client_send(cnet_client *ctx, uint8_t* msg, size_t msg_len);
+
+cnet_server* cnet_server_udp_init(const char *host);
+int cnet_server_recv(cnet_server * ctx, message *msg);
 
 
 #endif
