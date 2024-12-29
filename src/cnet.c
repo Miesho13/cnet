@@ -42,8 +42,12 @@
     #errors "x)"
 #endif
 
-host_descriptor resolve_host(const char *host) {
-    host_descriptor ret = {0};
+static inline bool prv_is_ip4(const char * ip) {
+    return inet_pton(AF_INET, ip, NULL);
+}
+
+host_info resolve_host(const char *host) {
+    host_info ret = {0};
 
     char *port_seperator = strchr(host, ':');
     ret.port = malloc(strlen(port_seperator));
