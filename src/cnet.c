@@ -88,21 +88,21 @@ int cnet_server_recv(cnet_server * ctx, message *msg) {
     return rec;
 }
 
-cnet_conn_t* cnet_client_open_udp(const char *host) {
-    cnet_conn_t *cnet_ctx = malloc(sizeof(*cnet_ctx));
+cnet_client* cnet_client_open_udp(const char *host) {
+    cnet_client *ctx = malloc(sizeof(*ctx));
 
-    host_descriptor host_desc = resolve_host(host);
+    host_info host_info = resolve_host(host);
     
-    cnet_ctx->host = host_desc;
-    cnet_ctx->transport = TRANSPORT_UDP;
-    cnet_ctx->server_addr_info.ai_family = AF_UNSPEC; 
-    cnet_ctx->server_addr_info.ai_socktype = SOCK_DGRAM; 
-    cnet_ctx->server_addr_info.ai_protocol = 0;
-    cnet_ctx->server_addr_info.ai_flags = 0;
+    ctx->host = host_info;
+    ctx->transport = TRANSPORT_UDP;
+    ctx->server_addr_info.ai_family = AF_UNSPEC; 
+    ctx->server_addr_info.ai_socktype = SOCK_DGRAM; 
+    ctx->server_addr_info.ai_protocol = 0;
+    ctx->server_addr_info.ai_flags = 0;
     
     struct addrinfo *result;
-    int ret = getaddrinfo(cnet_ctx->host.host_name, cnet_ctx->host.port, 
-                          &cnet_ctx->server_addr_info, &result);
+    int ret = getaddrinfo(ctx->host.host_name, ctx->host.port, 
+                          &ctx->server_addr_info, &result);
     if (ret != 0) {
         fprintf(stderr, "Host address canb be resolve (%d)", ret);
         goto error;
@@ -110,23 +110,23 @@ cnet_conn_t* cnet_client_open_udp(const char *host) {
     }
     struct addrinfo *rp; 
     for (rp = result; rp != NULL; rp = rp->ai_next) {
-        cnet_ctx->sockfd = socket(rp->ai_family, rp->ai_socktype,
+        ctx->sockfd = socket(rp->ai_family, rp->ai_socktype,
                                   rp->ai_protocol);
 
-        if (cnet_ctx->sockfd == -1) continue;
-        if (connect(cnet_ctx->sockfd, rp->ai_addr, rp->ai_addrlen) != -1) break;
+        if (ctx->sockfd == -1) continue;
+        if (connect(ctx->sockfd, rp->ai_addr, rp->ai_addrlen) != -1) break;
 
-        close(cnet_ctx->sockfd);
+        close(ctx->sockfd);
     }
     freeaddrinfo(result);
-    return cnet_ctx;
+    return ctx;
 
 error:
-    free(cnet_ctx);
+    free(ctx);
     return NULL;
 }
 
-int cnet_client_send(cnet_conn_t *cnh, uint8_t* msg, size_t msg_len) {
-    assert(cnh != NULL && "CNET must not be equal to NULL");
-    return send(cnh->sockfd, msg, msg_len, 0);
+int cnet_client_send(cnet_client *ctx, uint8_t* msg, size_t msg_len) {
+    assert(ctx != NULL && "CNET must not be equal to NULL");
+    return send(ctx->sockfd, msg, msg_len, 0);
 }
