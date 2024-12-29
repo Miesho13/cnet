@@ -61,8 +61,31 @@ host_info resolve_host(const char *host) {
     return ret;
 }
 
-static inline bool prv_is_ip4(const char * ip) {
-    return inet_pton(AF_INET, ip, NULL);
+cnet_server* cnet_server_udp_init(const char *host) {
+    cnet_server *ctx = calloc(1, sizeof(*ctx));
+    ctx->sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+    
+    host_info host_string = resolve_host(host);
+    ctx->server_addr.sin_family = AF_INET;
+    ctx->server_addr.sin_port = htons(atoi(host_string.port));
+    ctx->server_addr.sin_addr.s_addr = INADDR_ANY;
+    
+    int ret = bind(ctx->sockfd, (struct sockaddr*)&ctx->server_addr, 
+                   sizeof(ctx->server_addr));
+    if (ret != 0) { return NULL; }
+    
+    return ctx;
+}
+
+int cnet_server_recv(cnet_server * ctx, message *msg) {
+    assert(ctx && "cnet server can't be NULL");
+
+    int rec = recvfrom(ctx->sockfd, msg->msg, 512, 0, 
+                       (struct sockaddr*)&msg->sockaddr, &msg->addrlen);
+    if (rec < 0) { return -1; }
+    msg->msg_len = rec;
+
+    return rec;
 }
 
 cnet_conn_t* cnet_client_open_udp(const char *host) {
