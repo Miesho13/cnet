@@ -1,8 +1,8 @@
 /*
  *  File: cnet.h
- *  Author: marcin.ryzewskii@gmail.com 
- * 
- *  Copyright 2024 Marcin Ryzewski 
+ *  Author: marcin.ryzewskii@gmail.com
+ *
+ *  Copyright 2024 Marcin Ryzewski
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -15,10 +15,10 @@
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *  
- *  
+ *
+ *
  *  Brief: This file contains the implementation of the CNET library.
- *         It includes functions for establishing connections, sending and 
+ *         It includes functions for establishing connections, sending and
  *         receiving data, and handling errors.
  */
 
@@ -38,12 +38,6 @@
 #include <netinet/in.h>
 #endif
 
-typedef enum {
-    TRANSPORT_TCP = 0,
-    TRANSPORT_TLS,
-    TRANSPORT_UDP,
-    TRANSPORT_DTLS,
-} transport_layer_t;
 
 typedef struct {
     char *host_name;
@@ -51,11 +45,15 @@ typedef struct {
 } host_info;
 
 typedef struct {
-    host_info host;
-    transport_layer_t transport;
-    int sockfd;
-    struct addrinfo server_addr_info;
-} cnet_client;
+    int sock;
+    struct addrinfo *server_info;
+} cnet_udp_client_ctx;
+
+/* Client context */
+int cnet_udp_client_open(cnet_udp_client_ctx *ctx, const char *host);
+int cnet_udp_client_send(cnet_udp_client_ctx *ctx, uint8_t *msg,  size_t msg_len);
+int cnet_udp_client_recv(cnet_udp_client_ctx *ctx, char *buffer, size_t buffer_size);
+
 
 typedef struct {
     host_info host;
@@ -67,16 +65,18 @@ typedef struct {
 typedef struct {
     struct sockaddr_in sockaddr;
     socklen_t addrlen;
-    size_t msg_len;
-    uint8_t msg[512];
+    size_t    max_buff_len;
+    size_t    msg_size;
+    uint8_t  *msg_buff;
 
-} message;
+} incomming_msg;
 
-cnet_client* cnet_client_open_udp(const char* host);
-int cnet_client_send(cnet_client *ctx, uint8_t* msg, size_t msg_len);
-
+/* blocking polling server handler */
 cnet_server* cnet_server_udp_init(const char *host);
-int cnet_server_recv(cnet_server * ctx, message *msg);
+int cnet_server_recvfrom(cnet_server *ctx, incomming_msg *msg);
+int cnet_server_sendto(cnet_server *ctx, const struct sockaddr *addr,
+                       const socklen_t addr_len, uint8_t *buffer, size_t buffer_len);
 
+/* assync server */
 
 #endif

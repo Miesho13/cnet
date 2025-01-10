@@ -61,6 +61,48 @@ host_info resolve_host(const char *host) {
     return ret;
 }
 
+int cnet_udp_client_open(cnet_udp_client_ctx *ctx, const char *host) {
+    struct addrinfo hints;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_DGRAM;
+    
+    host_info host_info = resolve_host(host);
+
+    struct addrinfo *res;
+    int status = getaddrinfo(host_info.host_name, host_info.port, &hints, &res);
+    if (status != 0) { return -1; }
+    
+    for (struct addrinfo *p = res; p != NULL; p = p->ai_next) {
+        ctx->sock = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
+        if (ctx->sock < 0) continue;
+
+        if (connect(ctx->sock, p->ai_addr, p->ai_addrlen) == 0) {
+            ctx->server_info = p;
+            return 0;
+        }
+
+        close(ctx->sock);
+    }
+
+    freeaddrinfo(res);
+    return -1; 
+}
+
+int cnet_udp_client_send(cnet_udp_client_ctx *ctx, uint8_t *msg, 
+                         size_t msg_len) {
+    return send(ctx->sock, msg, msg_len, 0);
+}
+
+int cnet_udp_client_recv(cnet_udp_client_ctx *ctx, char *buffer, size_t buffer_size) {
+    int len = recv(ctx->sock, buffer, buffer_size, 0);
+    if (len < 0) {
+        perror("Receive failed");
+        return -1;
+    }
+    return len;
+}
+
 cnet_server* cnet_server_udp_init(const char *host) {
     cnet_server *ctx = calloc(1, sizeof(*ctx));
     ctx->sockfd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -69,7 +111,9 @@ cnet_server* cnet_server_udp_init(const char *host) {
     ctx->server_addr.sin_family = AF_INET;
     ctx->server_addr.sin_port = htons(atoi(host_string.port));
     ctx->server_addr.sin_addr.s_addr = INADDR_ANY;
-    
+
+    // TODO(marcin.ryzewski): Add the porper way to handle the error. Fuck that
+    //                        for now
     int ret = bind(ctx->sockfd, (struct sockaddr*)&ctx->server_addr, 
                    sizeof(ctx->server_addr));
     if (ret != 0) { return NULL; }
@@ -77,56 +121,21 @@ cnet_server* cnet_server_udp_init(const char *host) {
     return ctx;
 }
 
-int cnet_server_recv(cnet_server * ctx, message *msg) {
+int cnet_server_recvfrom(cnet_server *ctx, incomming_msg *msg) {
     assert(ctx && "cnet server can't be NULL");
 
-    int rec = recvfrom(ctx->sockfd, msg->msg, 512, 0, 
+    int rec = recvfrom(ctx->sockfd, msg->msg_buff, 512, 0, 
                        (struct sockaddr*)&msg->sockaddr, &msg->addrlen);
-    if (rec < 0) { return -1; }
-    msg->msg_len = rec;
+    if (rec < 0)  return -1;
 
+    msg->msg_size = rec;
     return rec;
 }
 
-cnet_client* cnet_client_open_udp(const char *host) {
-    cnet_client *ctx = malloc(sizeof(*ctx));
-
-    host_info host_info = resolve_host(host);
-    
-    ctx->host = host_info;
-    ctx->transport = TRANSPORT_UDP;
-    ctx->server_addr_info.ai_family = AF_UNSPEC; 
-    ctx->server_addr_info.ai_socktype = SOCK_DGRAM; 
-    ctx->server_addr_info.ai_protocol = 0;
-    ctx->server_addr_info.ai_flags = 0;
-    
-    struct addrinfo *result;
-    int ret = getaddrinfo(ctx->host.host_name, ctx->host.port, 
-                          &ctx->server_addr_info, &result);
-    if (ret != 0) {
-        fprintf(stderr, "Host address canb be resolve (%d)", ret);
-        goto error;
-        return NULL;
-    }
-    struct addrinfo *rp; 
-    for (rp = result; rp != NULL; rp = rp->ai_next) {
-        ctx->sockfd = socket(rp->ai_family, rp->ai_socktype,
-                                  rp->ai_protocol);
-
-        if (ctx->sockfd == -1) continue;
-        if (connect(ctx->sockfd, rp->ai_addr, rp->ai_addrlen) != -1) break;
-
-        close(ctx->sockfd);
-    }
-    freeaddrinfo(result);
-    return ctx;
-
-error:
-    free(ctx);
-    return NULL;
+int cnet_server_sendto(cnet_server *ctx, const struct sockaddr *addr, 
+                     const socklen_t addr_len, uint8_t *buffer, size_t buffer_len) {
+    ssize_t ret = sendto(ctx->sockfd, buffer, buffer_len, 0,
+                        addr, addr_len);
+    return ret;
 }
 
-int cnet_client_send(cnet_client *ctx, uint8_t* msg, size_t msg_len) {
-    assert(ctx != NULL && "CNET must not be equal to NULL");
-    return send(ctx->sockfd, msg, msg_len, 0);
-}
