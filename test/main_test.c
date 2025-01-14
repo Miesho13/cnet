@@ -3,14 +3,16 @@
 #include <stdint.h>
 #include <string.h>
 #include <assert.h>
+#include <string.h>
 
 
 int main(void) {
-    printf("test run...\n");
-    cnet_client *send = cnet_client_open_udp("127.0.0.1:6969");
+    printf("Clinet start...");
+    cnet_udp_client_ctx ctx = {0};
+    int ret = cnet_udp_client_open(&ctx, "localhost:6969");
     char msg[] = "Troche XD\n";
-    cnet_client_send(send, msg, strlen(msg));
-    close(send->sockfd);
+    ret = cnet_udp_client_send(&ctx, (uint8_t*)msg, strlen(msg));
+    close(ctx.sock);
 
     return 0;
 }

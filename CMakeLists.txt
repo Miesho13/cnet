@@ -10,9 +10,11 @@ file(GLOB_RECURSE CNET_SRC "src/*.c")
 
 add_library(cnetlib STATIC ${CNET_SRC})
 
-add_executable(test ./test/main_test.c)
-add_executable(test_server ./test/udp_connection.c)
+add_executable(client_test ./test/main_test.c)
+add_executable(udp_echo_server ./test/udp_connection.c)
+add_executable(async_test ./test/async_test.c)
 
-target_link_libraries(test cnetlib)
-target_link_libraries(test_server cnetlib)
+target_link_libraries(client_test cnetlib)
+target_link_libraries(async_test cnetlib)
+target_link_libraries(udp_echo_server cnetlib)
 
