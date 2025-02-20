@@ -25,58 +25,26 @@
 #ifndef __CNET__
 #define __CNET__
 
-#include "cnet_cfg.h"
+#include <stdlib.h>
 
-#include <netdb.h>
-#include <stdint.h>
-
-#ifdef __linux__
-#include <arpa/inet.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include <netinet/in.h>
-#endif
-
+typedef void* (*task_function)(void*);
 
 typedef struct {
-    char *host_name;
-    char *port;
-} host_info;
+    task_function call;
+    struct task *next;
+} task;
 
 typedef struct {
-    int sock;
-    struct addrinfo *server_info;
-} cnet_udp_client_ctx;
-
-/* Client context */
-int cnet_udp_client_open(cnet_udp_client_ctx *ctx, const char *host);
-int cnet_udp_client_send(cnet_udp_client_ctx *ctx, uint8_t *msg,  size_t msg_len);
-int cnet_udp_client_recv(cnet_udp_client_ctx *ctx, char *buffer, size_t buffer_size);
-
+    size_t task_count;
+    task *head;
+} task_queue;
 
 typedef struct {
-    host_info host;
+    task_queue task_q;
+} async_cnet_hanler_t;
 
-    int sockfd;
-    struct sockaddr_in server_addr; // ipv4
-} cnet_server;
+void async_cnet_init(async_cnet_hanler_t *hcnet);
 
-typedef struct {
-    struct sockaddr_in sockaddr;
-    socklen_t addrlen;
-    size_t    max_buff_len;
-    size_t    msg_size;
-    uint8_t  *msg_buff;
-
-} incomming_msg;
-
-/* blocking polling server handler */
-cnet_server* cnet_server_udp_init(const char *host);
-int cnet_server_recvfrom(cnet_server *ctx, incomming_msg *msg);
-int cnet_server_sendto(cnet_server *ctx, const struct sockaddr *addr,
-                       const socklen_t addr_len, uint8_t *buffer, size_t buffer_len);
-
-/* assync server */
+void async_cnet_setp(async_cnet_hanler_t *hcnet);
 
 #endif
