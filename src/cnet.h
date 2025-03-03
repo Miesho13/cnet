@@ -26,11 +26,36 @@
 #define __CNET__
 
 #include <stdlib.h>
+#include <stdbool.h>
+#include <string.h>
+#include <stdio.h>
+#include <assert.h>
+#include <stdlib.h>
+
+#ifdef __linux__
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#elif defined(_WIN32)
+#errors "The Windows port has not been crated yet"
+#elif defined(__APPLE__) && defined(__MACH__)
+#errors "x)"
+
+#endif
 
 typedef void* (*task_function)(void*);
 
 typedef struct {
+    uint8_t buffer[1024];
     task_function call;
+    void *arg;
+} task_context;
+
+typedef struct {
+    task_context ctx;
     struct task *next;
 } task;
 
@@ -43,8 +68,8 @@ typedef struct {
     task_queue task_q;
 } async_cnet_hanler_t;
 
-void async_cnet_init(async_cnet_hanler_t *hcnet);
 
+void async_cnet_init(async_cnet_hanler_t *hcnet);
 void async_cnet_setp(async_cnet_hanler_t *hcnet);
 
 #endif
