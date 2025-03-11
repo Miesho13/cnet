@@ -31,6 +31,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 #ifdef __linux__
 #include <arpa/inet.h>
@@ -43,10 +44,19 @@
 #errors "The Windows port has not been crated yet"
 #elif defined(__APPLE__) && defined(__MACH__)
 #errors "x)"
-
 #endif
 
-typedef void* (*task_function)(void*);
+// CALLBACK 
+struct sender { };
+struct message { };
+
+typedef void* (*recv_callback)(char *message);
+typedef int (*task_function)(void*);
+typedef void* (*event)(void*);
+
+typedef struct {
+    event close_app;
+} event_table;
 
 typedef struct {
     uint8_t buffer[1024];
@@ -54,22 +64,27 @@ typedef struct {
     void *arg;
 } task_context;
 
-typedef struct {
+typedef struct _task{
     task_context ctx;
-    struct task *next;
+    struct _task *next;
+    struct _task *prev;
 } task;
 
 typedef struct {
-    size_t task_count;
+    size_t count;
     task *head;
 } task_queue;
 
 typedef struct {
     task_queue task_q;
+    event_table call_event;
+    bool app_run;
 } async_cnet_hanler_t;
 
 
 void async_cnet_init(async_cnet_hanler_t *hcnet);
-void async_cnet_setp(async_cnet_hanler_t *hcnet);
+void async_cnet_run(async_cnet_hanler_t *hcnet);
+
+
 
 #endif

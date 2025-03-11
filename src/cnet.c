@@ -36,11 +36,90 @@
 #include <unistd.h>
 #include <netinet/in.h>
 #include <netdb.h>
+
 #elif defined(_WIN32)
- #errors "The Windows port has not been crated yet"
+#errors "The Windows port has not been crated yet"
 #elif defined(__APPLE__) && defined(__MACH__)
- #errors "x)"
+#errors "x)"
 #endif
 
+typedef enum { 
+    END_TASK,
+    CONTINUE_TASK,
+} _EVENT;
+
+void async_cnet_init(async_cnet_hanler_t *hcnet) {
+    hcnet->task_q.head = NULL;
+    hcnet->task_q.count = 0;
+    hcnet->app_run = true;
+}
+
+static inline size_t _task_queue_count(async_cnet_hanler_t *hcnet) {
+    return hcnet->task_q.count;
+}
+
+static inline int _task_call(task *htask) {
+    return htask->ctx.call(htask->ctx.arg);
+}
+
+static inline void _task_next(task *htask) {
+    htask = htask->next;
+}
+
+static inline void _task_remove(task_queue *queue, task *htask) {
+    if (queue->count > 1) {
+        htask->prev->next = htask->next;
+        htask->next->prev = htask->prev;
+        free(htask);
+    }
+    else if (queue->count == 1) {
+        free(htask);
+    }
+    queue->count--;
+}
+
+static inline task* _allock_task() {
+    return calloc(1, sizeof(task));
+}
+
+static inline void _push_task(task_queue *htask, task_context new_ctx_task) {
+    task *new_task = _allock_task();
+    memcpy(&new_task->ctx, &new_ctx_task, sizeof(new_task->ctx));
+    
+    if (htask->count == 0) {
+        htask->head = new_task;
+        htask->count++;
+        return;
+    }
+
+    task *first = htask->head;
+    task *last = htask->head;
+    for (uint32_t i = 0; i < htask->count - 1; i++) { last = last->next; } 
+    
+    new_task->next = first;
+    first->prev = new_task;
+    last->next = new_task;
+    new_task->prev = last;
+
+    htask->head = new_task;
+    htask->count++;
+}
+
+void async_cnet_run(async_cnet_hanler_t *hcnet) {
+    task *current = hcnet->task_q.head;
+    while (hcnet->app_run) {
+        if (_task_queue_count(hcnet) == 0) {
+            usleep(1);
+            continue;
+        }
+
+        int ret = _task_call(current);
+        current = current->next;
+        
+        if (ret == END_TASK) {
+            _task_remove(&hcnet->task_q, current->prev);
+        } 
+    }
+}
 
 
