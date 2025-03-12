@@ -84,6 +84,8 @@ static inline void _push_task(task_queue *htask, task_context new_ctx_task) {
     
     if (htask->count == 0) {
         htask->head = new_task;
+        htask->head->prev = new_task;
+        htask->head->next = new_task;
         htask->count++;
         return;
     }
