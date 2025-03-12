@@ -43,10 +43,6 @@
 #errors "x)"
 #endif
 
-typedef enum { 
-    END_TASK,
-    CONTINUE_TASK,
-} _EVENT;
 
 void async_cnet_init(async_cnet_hanler_t *hcnet) {
     hcnet->task_q.head = NULL;
