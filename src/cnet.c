@@ -103,6 +103,59 @@ static inline void _push_task(task_queue *htask, task_context new_ctx_task) {
     htask->count++;
 }
 
+void async_listening(async_cnet_hanler_t *hcnet, char *host, int port) {
+    server_context server_context;
+    hcnet->server_ctx.sock_fd = socket(AF_INET, SOCK_DGRAM, 0);
+
+    hcnet->server_ctx.server_sock.sin_family = AF_INET;
+    hcnet->server_ctx.server_sock.sin_addr.s_addr = INADDR_ANY;
+    hcnet->server_ctx.server_sock.sin_port = htons(port);
+
+    bind(
+        server_context.sock_fd, 
+        (struct sockaddr *)&server_context.server_sock, 
+        sizeof(server_context.server_sock));
+
+}
+
+typedef struct {
+    server_context *server_ctx;
+    recv_callback callback;
+} recv_arg; 
+
+int _recv_callback(void* arg) {
+    recv_arg *rec_arg = (recv_arg*)arg;
+    
+    message_descriptor message = {0};
+    
+    message.len = recvfrom(rec_arg->server_ctx->sock_fd, message.buffer, 1024, 
+        MSG_DONTWAIT, (struct sockaddr *)&message.src_addr, 
+        &message.addr_len);
+    
+    if (message.len > 0) {
+        return rec_arg->callback(&message); 
+    } else {
+        return CONTINUE_TASK;
+    }
+}
+
+void async_recv(async_cnet_hanler_t *hcnet, recv_callback callback) {
+    task_context task = {0};
+
+    recv_arg *arg = malloc(sizeof(*arg));
+    arg->server_ctx = &hcnet->server_ctx;
+    arg->callback = callback;
+
+    task.call = _recv_callback;
+    task.arg = arg;
+    
+    _push_task(&hcnet->task_q, task);
+}
+
+void async_send(async_cnet_hanler_t *hcnet, char *host, int port) {
+    return;
+}
+
 void async_cnet_run(async_cnet_hanler_t *hcnet) {
     task *current = hcnet->task_q.head;
     while (hcnet->app_run) {

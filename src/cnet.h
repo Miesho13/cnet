@@ -46,11 +46,26 @@
 #errors "x)"
 #endif
 
-// CALLBACK 
-struct sender { };
-struct message { };
 
-typedef void* (*recv_callback)(char *message);
+
+typedef enum { 
+    END_TASK,
+    CONTINUE_TASK,
+} EVENT;
+
+typedef enum {
+    TCP,
+    UDP,
+} TRANSPORt_TYPE;
+
+typedef struct {
+    uint8_t buffer[1024];
+    int len;
+    struct sockaddr_in src_addr;
+    socklen_t addr_len;
+} message_descriptor;
+
+typedef int (*recv_callback)(message_descriptor*);
 typedef int (*task_function)(void*);
 typedef void* (*event)(void*);
 
@@ -61,6 +76,7 @@ typedef struct {
 typedef struct {
     uint8_t buffer[1024];
     task_function call;
+    void *callback;
     void *arg;
 } task_context;
 
@@ -76,15 +92,21 @@ typedef struct {
 } task_queue;
 
 typedef struct {
+    int sock_fd;      
+    struct sockaddr_in server_sock;
+} server_context;
+
+typedef struct {
     task_queue task_q;
     event_table call_event;
+    server_context server_ctx;
     bool app_run;
 } async_cnet_hanler_t;
 
 
 void async_cnet_init(async_cnet_hanler_t *hcnet);
 void async_cnet_run(async_cnet_hanler_t *hcnet);
-
-
+void async_recv(async_cnet_hanler_t *hcnet, recv_callback callback);
+void async_listening(async_cnet_hanler_t *hcnet, char *host, int port);
 
 #endif
