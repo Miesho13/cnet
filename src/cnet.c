@@ -104,7 +104,6 @@ static inline void _push_task(task_queue *htask, task_context new_ctx_task) {
 }
 
 void async_listening(async_cnet_hanler_t *hcnet, char *host, int port) {
-    server_context server_context;
     hcnet->server_ctx.sock_fd = socket(AF_INET, SOCK_DGRAM, 0);
 
     hcnet->server_ctx.server_sock.sin_family = AF_INET;
@@ -112,9 +111,10 @@ void async_listening(async_cnet_hanler_t *hcnet, char *host, int port) {
     hcnet->server_ctx.server_sock.sin_port = htons(port);
 
     bind(
-        server_context.sock_fd, 
-        (struct sockaddr *)&server_context.server_sock, 
-        sizeof(server_context.server_sock));
+        hcnet->server_ctx.sock_fd, 
+        (struct sockaddr *)&hcnet->server_ctx.server_sock, 
+        sizeof(hcnet->server_ctx.server_sock)
+    );
 
 }
 
