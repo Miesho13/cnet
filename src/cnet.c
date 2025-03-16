@@ -104,18 +104,18 @@ static inline void _push_task(task_queue *htask, task_context new_ctx_task) {
 }
 
 void async_listening(async_cnet_hanler_t *hcnet, char *host, int port) {
+    (void)host;
+
     hcnet->server_ctx.sock_fd = socket(AF_INET, SOCK_DGRAM, 0);
 
     hcnet->server_ctx.server_sock.sin_family = AF_INET;
     hcnet->server_ctx.server_sock.sin_addr.s_addr = INADDR_ANY;
     hcnet->server_ctx.server_sock.sin_port = htons(port);
 
-    bind(
-        hcnet->server_ctx.sock_fd, 
+    bind(hcnet->server_ctx.sock_fd, 
         (struct sockaddr *)&hcnet->server_ctx.server_sock, 
         sizeof(hcnet->server_ctx.server_sock)
     );
-
 }
 
 typedef struct {
@@ -153,6 +153,9 @@ void async_recv(async_cnet_hanler_t *hcnet, recv_callback callback) {
 }
 
 void async_send(async_cnet_hanler_t *hcnet, char *host, int port) {
+    (void)hcnet;
+    (void)host;
+    (void)port;
     return;
 }
 
