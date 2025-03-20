@@ -23,11 +23,10 @@
  */
 
 #include "cnet.h"
-#include <stdlib.h>
 #include <stdbool.h>
-#include <string.h>
-#include <stdio.h>
+#include <stdlib.h> 
 #include <assert.h>
+#include <string.h>
 
 #ifdef __linux__
 #include <arpa/inet.h>
@@ -36,6 +35,7 @@
 #include <unistd.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#include <poll.h>
 
 #elif defined(_WIN32)
 #errors "The Windows port has not been crated yet"
@@ -43,137 +43,57 @@
 #errors "x)"
 #endif
 
+static inline char* _get_host(const char* input) {
+    if (!input) return NULL;
 
-void async_cnet_init(async_cnet_hanler_t *hcnet) {
-    hcnet->task_q.head = NULL;
-    hcnet->task_q.count = 0;
-    hcnet->app_run = true;
+    const char* colon = strchr(input, ':');
+    size_t host_len = colon ? (size_t)(colon - input) : strlen(input);
+
+    char* host = (char*)malloc(host_len + 1);
+    if (!host) return NULL;
+
+    strncpy(host, input, host_len);
+    host[host_len] = '\0';
+
+    return host;
 }
 
-static inline size_t _task_queue_count(async_cnet_hanler_t *hcnet) {
-    return hcnet->task_q.count;
-}
-
-static inline int _task_call(task *htask) {
-    return htask->ctx.call(htask->ctx.arg);
-}
-
-static inline void _task_next(task *htask) {
-    htask = htask->next;
-}
-
-static inline void _task_remove(task_queue *queue, task *htask) {
-    if (queue->count > 1) {
-        htask->prev->next = htask->next;
-        htask->next->prev = htask->prev;
-        free(htask);
+static int _domain_type() {
+    char* host_tmp = _get_host(host);
+    if (strcmp(host_tmp, "0.0.0.0")) {
+        return INADDR_ANY;
     }
-    else if (queue->count == 1) {
-        free(htask);
+    else if (strcmp(host_tmp, "localhost")) {
+
     }
-    queue->count--;
-}
+    else if (strcmp(host_tmp, "127.0.0.1")) {
 
-static inline task* _allock_task() {
-    return calloc(1, sizeof(task));
-}
+    } 
+    else {
 
-static inline void _push_task(task_queue *htask, task_context new_ctx_task) {
-    task *new_task = _allock_task();
-    memcpy(&new_task->ctx, &new_ctx_task, sizeof(new_task->ctx));
-    
-    if (htask->count == 0) {
-        htask->head = new_task;
-        htask->head->prev = new_task;
-        htask->head->next = new_task;
-        htask->count++;
-        return;
     }
+    free(host_tmp);
+}
 
-    task *first = htask->head;
-    task *last = htask->head;
-    for (uint32_t i = 0; i < htask->count - 1; i++) { last = last->next; } 
+void server_init(cnet *cnet_handler, const char* host) {
+    int fd = socket(AF_INET, SOCK_DGRAM, 0);
+
+}
+
+void cnet_init(cnet *cnet_handler, size_t task_sizie) {
+    cnet_handler->fds = calloc(task_sizie, sizeof(*cnet_handler->fds));
+    cnet_handler->task = calloc(task_sizie, sizeof(*cnet_handler->task));
+    cnet_handler->task_count = 0;
+}
+
+void async_run(cnet *cnet_handler) {
     
-    new_task->next = first;
-    first->prev = new_task;
-    last->next = new_task;
-    new_task->prev = last;
-
-    htask->head = new_task;
-    htask->count++;
 }
 
-void async_listening(async_cnet_hanler_t *hcnet, char *host, int port) {
-    (void)host;
 
-    hcnet->server_ctx.sock_fd = socket(AF_INET, SOCK_DGRAM, 0);
 
-    hcnet->server_ctx.server_sock.sin_family = AF_INET;
-    hcnet->server_ctx.server_sock.sin_addr.s_addr = INADDR_ANY;
-    hcnet->server_ctx.server_sock.sin_port = htons(port);
 
-    bind(hcnet->server_ctx.sock_fd, 
-        (struct sockaddr *)&hcnet->server_ctx.server_sock, 
-        sizeof(hcnet->server_ctx.server_sock)
-    );
-}
 
-typedef struct {
-    server_context *server_ctx;
-    recv_callback callback;
-} recv_arg; 
 
-int _recv_callback(void* arg) {
-    recv_arg *rec_arg = (recv_arg*)arg;
-    
-    message_descriptor message = {0};
-    
-    message.len = recvfrom(rec_arg->server_ctx->sock_fd, message.buffer, 1024, 
-        MSG_DONTWAIT, (struct sockaddr *)&message.src_addr, 
-        &message.addr_len);
-    
-    if (message.len > 0) {
-        return rec_arg->callback(&message); 
-    } else {
-        return CONTINUE_TASK;
-    }
-}
-
-void async_recv(async_cnet_hanler_t *hcnet, recv_callback callback) {
-    task_context task = {0};
-
-    recv_arg *arg = malloc(sizeof(*arg));
-    arg->server_ctx = &hcnet->server_ctx;
-    arg->callback = callback;
-
-    task.call = _recv_callback;
-    task.arg = arg;
-    
-    _push_task(&hcnet->task_q, task);
-}
-
-void async_send(async_cnet_hanler_t *hcnet, char *host, int port) {
-    (void)hcnet;
-    (void)host;
-    (void)port;
-    return;
-}
-
-void async_cnet_run(async_cnet_hanler_t *hcnet) {
-    task *current = hcnet->task_q.head;
-    while (hcnet->app_run) {
-        if (_task_queue_count(hcnet) == 0) {
-            usleep(1);
-            continue;
-        }
-
-        int ret = _task_call(current);
-        current = current->next;
-        
-        if (ret == END_TASK) {
-            _task_remove(&hcnet->task_q, current->prev);
-        } 
-    }
-}
 
 

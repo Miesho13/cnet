@@ -25,12 +25,8 @@
 #ifndef __CNET__
 #define __CNET__
 
-#include <stdlib.h>
 #include <stdbool.h>
-#include <string.h>
-#include <stdio.h>
 #include <assert.h>
-#include <stdlib.h>
 #include <stdbool.h>
 
 #ifdef __linux__
@@ -40,73 +36,28 @@
 #include <unistd.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#include <poll.h>
+
 #elif defined(_WIN32)
 #errors "The Windows port has not been crated yet"
 #elif defined(__APPLE__) && defined(__MACH__)
 #errors "x)"
 #endif
 
+typedef struct { 
+        
+} async_task;
 
+typedef struct { 
+    struct pollfd *fds;
+    async_task *task;
 
-typedef enum { 
-    END_TASK,
-    CONTINUE_TASK,
-} EVENT;
+    size_t task_count;
+} cnet;
 
-typedef enum {
-    TCP,
-    UDP,
-} TRANSPORt_TYPE;
-
-typedef struct {
-    uint8_t buffer[1024];
-    int len;
-    struct sockaddr_in src_addr;
-    socklen_t addr_len;
-} message_descriptor;
-
-typedef int (*recv_callback)(message_descriptor*);
-typedef int (*task_function)(void*);
-typedef void* (*event)(void*);
-
-typedef struct {
-    event close_app;
-} event_table;
-
-typedef struct {
-    uint8_t buffer[1024];
-    task_function call;
-    void *callback;
-    void *arg;
-} task_context;
-
-typedef struct _task{
-    task_context ctx;
-    struct _task *next;
-    struct _task *prev;
-} task;
-
-typedef struct {
-    size_t count;
-    task *head;
-} task_queue;
-
-typedef struct {
-    int sock_fd;      
-    struct sockaddr_in server_sock;
-} server_context;
-
-typedef struct {
-    task_queue task_q;
-    event_table call_event;
-    server_context server_ctx;
-    bool app_run;
-} async_cnet_hanler_t;
-
-
-void async_cnet_init(async_cnet_hanler_t *hcnet);
-void async_cnet_run(async_cnet_hanler_t *hcnet);
-void async_recv(async_cnet_hanler_t *hcnet, recv_callback callback);
-void async_listening(async_cnet_hanler_t *hcnet, char *host, int port);
+void server_init(cnet *cnet_handler, const char* host);
+void cnet_init(cnet *cnet_handler, size_t task_sizie);
+void async_run(cnet *cnet_handler);
 
 #endif
+
