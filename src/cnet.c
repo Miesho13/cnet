@@ -47,7 +47,7 @@
 void async_cnet_init(async_cnet_hanler_t *hcnet) {
     hcnet->task_q.head = NULL;
     hcnet->task_q.count = 0;
-    hcnet->app_run = true;
+    hcnet->end_async = false;
 }
 
 static inline size_t _task_queue_count(async_cnet_hanler_t *hcnet) {
@@ -92,7 +92,9 @@ static inline void _push_task(task_queue *htask, task_context new_ctx_task) {
 
     task *first = htask->head;
     task *last = htask->head;
-    for (uint32_t i = 0; i < htask->count - 1; i++) { last = last->next; } 
+    for (uint32_t i = 0; i < htask->count - 1; i++) { 
+        last = last->next;
+    } 
     
     new_task->next = first;
     first->prev = new_task;
@@ -112,10 +114,9 @@ void async_listening(async_cnet_hanler_t *hcnet, char *host, int port) {
     hcnet->server_ctx.server_sock.sin_addr.s_addr = INADDR_ANY;
     hcnet->server_ctx.server_sock.sin_port = htons(port);
 
-    bind(hcnet->server_ctx.sock_fd, 
+    int ret = bind(hcnet->server_ctx.sock_fd,  
         (struct sockaddr *)&hcnet->server_ctx.server_sock, 
-        sizeof(hcnet->server_ctx.server_sock)
-    );
+        sizeof(hcnet->server_ctx.server_sock));
 }
 
 typedef struct {
@@ -139,6 +140,55 @@ int _recv_callback(void* arg) {
     }
 }
 
+static inline char* _get_host(const char* input) {
+    if (!input) return NULL;
+
+    const char* colon = strchr(input, ':');
+    size_t host_len = colon ? (size_t)(colon - input) : strlen(input);
+
+    char* host = (char*)malloc(host_len + 1);
+    if (!host) return NULL;
+
+    strncpy(host, input, host_len);
+    host[host_len] = '\0';
+
+    return host;
+}
+
+static inline char* _get_port(const char* input) {
+    if (!input) return NULL;
+
+    const char* colon = strchr(input, ':');
+    if (!colon || *(colon + 1) == '\0') {
+        return NULL;
+    }
+
+    const char* port_part = colon + 1;
+    char* port = strdup(port_part);
+
+    return port;
+}
+
+dest_handler host_context(const char *uri) {
+    dest_handler ret = {0};
+
+    const char *port_delim = strrchr(uri, ':');
+    if (!port_delim) {
+        return ret;
+    }
+    
+    char *host = _get_host(uri);
+    char *port = _get_port(uri);
+
+    struct addrinfo hint = { .ai_family = AF_INET, .ai_socktype = SOCK_DGRAM };
+
+    int get_ret = getaddrinfo(host, port, &hint, &ret.server_sock);
+    free(port);
+    free(host);
+
+    return ret;
+}
+
 void async_recv(async_cnet_hanler_t *hcnet, recv_callback callback) {
     task_context task = {0};
 
@@ -152,16 +202,21 @@ void async_recv(async_cnet_hanler_t *hcnet, recv_callback callback) {
     _push_task(&hcnet->task_q, task);
 }
 
-void async_send(async_cnet_hanler_t *hcnet, char *host, int port) {
-    (void)hcnet;
-    (void)host;
-    (void)port;
-    return;
+int send_to(async_cnet_hanler_t *hcnet, 
+            const char *host, 
+            uint8_t buffer, size_t len) {
+    return 0;
+} 
+
+int async_send_to(async_cnet_hanler_t *hcnet, 
+                  dest_handler *dest_handler, 
+                  uint8_t buffer, size_t len) {
+    return 0;
 }
 
 void async_cnet_run(async_cnet_hanler_t *hcnet) {
     task *current = hcnet->task_q.head;
-    while (hcnet->app_run) {
+    while (!hcnet->end_async) {
         if (_task_queue_count(hcnet) == 0) {
             usleep(1);
             continue;

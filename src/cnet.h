@@ -97,13 +97,18 @@ typedef struct {
 } server_context;
 
 typedef struct {
+    struct addrinfo *server_sock;
+} dest_handler;
+
+typedef struct {
     task_queue task_q;
     event_table call_event;
     server_context server_ctx;
-    bool app_run;
+
+    bool end_async;
 } async_cnet_hanler_t;
 
-
+dest_handler host_context(const char *uri);
 void async_cnet_init(async_cnet_hanler_t *hcnet);
 void async_cnet_run(async_cnet_hanler_t *hcnet);
 void async_recv(async_cnet_hanler_t *hcnet, recv_callback callback);
