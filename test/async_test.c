@@ -5,17 +5,18 @@
 
 
 
-typedef int (*task)(void*);
 
-
-typedef 
-
-typedef struct {
-        
-} task_loop;
-
+int recv_callback_imp(message_descriptor *msg) {
+    printf("test\n");
+}
 
 int main() {
     printf("Async test\n");
+
+    async_cnet_hanler_t hcnet;
+    async_cnet_init(&hcnet);
+
+    async_recv(&hcnet, recv_callback_imp);
+    async_cnet_run(&hcnet);
     return 0;
 }
