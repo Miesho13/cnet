@@ -63,6 +63,8 @@ static int prv_set_non_block(cnet_context_t *ctx) {
 }
 
 static int prv_init_udp_server(cnet_context_t *ctx, const char *uri, const char *port) {
+    ctx->transport = CNET_TRANSPORT_UDP;
+
     int ret = 0;
     struct addrinfo hints = {0};
 
@@ -113,6 +115,36 @@ int cnet_init_server(cnet_context_t *ctx,
 }
 
 static inline int prv_udp_step(cnet_context_t *ctx) {
+    int event_count = epoll_wait(ctx->epollfd, ctx->events, EVENT_POLL_SIZE, -1);
+    if (event_count < 0) {
+        perror("epoll_wait");
+        return -1;  
+    }
+    
+    for (int event_id = 0; event_id < event_count; event_id++) {
+        uint32_t event_handler = ctx->events[event_id].events;
+        uint32_t related_fd = ctx->events[event_id].data.fd;
+
+        if (event_handler & (EPOLLERR | EPOLLHUP | EPOLLRDHUP)) {
+            continue;
+        }
+        
+        if ((event_handler & EPOLLIN) && ctx->fd == related_fd) {
+            cnet_message_t msg;
+            msg.address_len = sizeof(msg.recv_sock);
+
+            msg.data_size = recvfrom(ctx->fd, msg.data, sizeof(msg.data),
+               0, &msg.recv_sock, &msg.address_len);
+
+            getnameinfo(&msg.recv_sock, msg.address_len, msg.host, 
+                sizeof(msg.host), msg.port, sizeof(msg.port), 
+                NI_NUMERICHOST | NI_NUMERICSERV);
+
+            ctx->recv_callback(&msg);
+        }
+
+    }
+
     return 0;
 }
 
