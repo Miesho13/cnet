@@ -114,6 +114,38 @@ int cnet_init_server(cnet_context_t *ctx,
     return -1;
 }
 
+int cnet_async_open(cnet_context_t *ctx, const char *host, const char *port, TRANSPORT_T transport) {
+
+    struct addrinfo hints = {0};
+
+    hints.ai_family   = AF_INET;
+    hints.ai_socktype = SOCK_DGRAM; 
+    hints.ai_flags    = AI_PASSIVE; 
+
+    struct addrinfo *res = NULL;
+    int ret = getaddrinfo(host, port, &hints, &res);
+    if (ret != 0 ) { return -1; }
+
+    for (struct addrinfo *iter = res; iter != NULL; iter = iter->ai_next) {
+        ctx->fd = socket(iter->ai_family, iter->ai_socktype, iter->ai_protocol);
+        if (ctx->fd == -1) { continue; }
+    }
+    
+    if (ctx->fd < 0) { 
+        freeaddrinfo(res);
+    }
+    
+    ctx->clients_ctx.dest_addr = *(res->ai_addr);
+    ctx->clients_ctx.dest_addr_len = res->ai_addrlen; 
+
+    prv_set_non_block(ctx);
+    prv_setup_epoll(ctx);
+
+    ctx->transport = transport;
+
+    return 0;
+}
+
 static inline int prv_udp_step(cnet_context_t *ctx) {
     int event_count = epoll_wait(ctx->epollfd, ctx->events, EVENT_POLL_SIZE, -1);
     if (event_count < 0) {

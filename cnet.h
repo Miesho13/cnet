@@ -73,6 +73,13 @@ typedef struct {
     int epollfd;
     struct epoll_event ev;
     struct epoll_event events[EVENT_POLL_SIZE];
+
+    struct client {
+        struct sockaddr dest_addr;
+        socklen_t dest_addr_len;
+        char host[NI_MAXHOST];
+        char port[NI_MAXSERV];
+    } clients_ctx;
     
     // callback
     int (*recv_callback)(cnet_message_t* msg);
@@ -86,6 +93,10 @@ int cnet_init_server(cnet_context_t *ctx,
                      const char *uri, 
                      const char *port, 
                      TRANSPORT_T transport);
+int cnet_async_open(cnet_context_t *ctx, 
+                    const char *host, 
+                    const char *port, 
+                    TRANSPORT_T transport);
 int cnet_step(cnet_context_t *ctx);
 int cnet_async_recv();
 int cnet_async_send();
