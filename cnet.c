@@ -168,11 +168,13 @@ static inline int prv_udp_step(cnet_context_t *ctx) {
             msg.data_size = recvfrom(ctx->fd, msg.data, sizeof(msg.data),
                0, &msg.recv_sock, &msg.address_len);
 
+            msg.data[msg.data_size] = 0;
+
             getnameinfo(&msg.recv_sock, msg.address_len, msg.host, 
                 sizeof(msg.host), msg.port, sizeof(msg.port), 
                 NI_NUMERICHOST | NI_NUMERICSERV);
-
-            ctx->recv_callback(&msg);
+        
+            if (ctx->recv_callback) { ctx->recv_callback(ctx, &msg); }
         }
 
     }
