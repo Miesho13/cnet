@@ -199,25 +199,7 @@ int cnet_step(cnet_context_t *ctx) {
     return -1;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+int cnet_send(cnet_context_t *ctx, uint8_t *tx, size_t tx_size) {
+    return sendto(ctx->fd, tx, tx_size, 0, 
+            &ctx->clients_ctx.dest_addr, ctx->clients_ctx.dest_addr_len);
+}

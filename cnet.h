@@ -98,7 +98,7 @@ int cnet_async_open(cnet_context_t *ctx,
                     const char *port, 
                     TRANSPORT_T transport);
 int cnet_step(cnet_context_t *ctx);
-int cnet_async_recv();
-int cnet_async_send();
+
+int cnet_send(cnet_context_t *ctx, uint8_t *tx, size_t tx_size);
 
 #endif
