@@ -49,7 +49,7 @@
 
 #define CNET_EPOLL_MAX_EVENT (10)
 #define EVENT_POLL_SIZE (64)
-#define CNET_TX_BUFFER_MAX_SIZE (1024)
+#define CNET_TX_BUFFER_MAX_SIZE (4*1024)
 
 typedef enum {
     CNET_TRANSPORT_UDP,
@@ -65,7 +65,7 @@ typedef struct  {
     socklen_t address_len; 
 } cnet_message_t;
 
-typedef struct {
+typedef struct _cnet_context_t {
     int fd;
     TRANSPORT_T transport;
     
@@ -82,8 +82,8 @@ typedef struct {
     } clients_ctx;
     
     // callback
-    int (*recv_callback)(cnet_message_t* msg);
-    int (*send_callback)(cnet_message_t* msg);
+    int (*recv_callback)(struct _cnet_context_t *ctx, cnet_message_t* msg);
+    int (*send_callback)(struct _cnet_context_t *ctx, cnet_message_t* msg);
     
 } cnet_context_t;
 
